@@ -1,250 +1,844 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Documentation — Phantom OSINT</title>
-    <meta name="description"
-        content="Phantom OSINT API documentation. GET /api/lookup endpoint for mobile number intelligence.">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="color-scheme" content="dark">
+    <meta name="theme-color" content="#07070c">
+    <title>API Documentation — HiTek &amp; ICMR DB OSINT (v2)</title>
+    <meta name="description" content="Documentation for self-hosted HiTek &amp; ICMR SQLite REST API. Dual phone and Aadhaar intelligence lookup with multi-hop BFS traversal.">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
-        rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <script src="config.js" defer onerror="this.onerror=null;this.src='config.example.js';"></script>
+    <script src="app.js" defer></script>
 </head>
-
 <body>
 
-    <!-- Toast Notifications -->
-    <div class="toast-container" id="toastContainer"></div>
+<!-- SVG icon sprite -->
+<svg class="sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display:none">
+    <symbol id="i-terminal" viewBox="0 0 24 24"><path d="m4 17 6-5-6-5"/><path d="M12 19h8"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+    <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="m22 2-11 11"/><path d="M22 2 15 22l-4-9-9-4z"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></symbol>
+    <symbol id="i-network" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="16" y="16" width="6" height="6" rx="1"/><path d="M12 8v4"/><path d="M5 16v-2h14v2"/></symbol>
+    <symbol id="i-activity" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></symbol>
+    <symbol id="i-clipboard" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-3.6 8-10V5l-8-3-8 3v7c0 6.4 8 10 8 10z"/></symbol>
+    <symbol id="i-database" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></symbol>
+    <symbol id="i-id" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M15 8h2"/><path d="M15 12h2"/><path d="M7 16h10"/></symbol>
+    <symbol id="i-server" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></symbol>
+</svg>
 
-    <!-- Particles Background -->
-    <canvas class="particles-canvas" id="particlesCanvas"></canvas>
+<!-- Toast notifications -->
+<div class="toast-container" id="toastContainer" aria-live="polite" aria-label="Notifications"></div>
 
-    <!-- Navigation -->
-    <nav class="navbar">
-        <a href="index.html" class="nav-brand">Phantom<span>OSINT</span></a>
-        <button class="menu-toggle" onclick="document.querySelector('.nav-links').classList.toggle('open')">☰</button>
-        <ul class="nav-links">
-            <li><a href="index.html">Search</a></li>
-            <li><a href="docs.html" class="active">API Docs</a></li>
-            <li><a href="https://github.com/Unknown-2829/Hitek_db_api-web" target="_blank">GitHub</a></li>
-            <li><a href="#get-api" class="btn-nav">Get API</a></li>
+<!-- Particles background -->
+<canvas class="bg-canvas" id="bgCanvas" aria-hidden="true"></canvas>
+
+<!-- Navigation -->
+<header class="navbar" id="navbar">
+    <div class="nav-inner">
+        <a class="brand" href="index.html" aria-label="HiTek ICMR OSINT — home">
+            <span class="brand-mark"><svg class="icon icon-sm"><use href="#i-terminal"/></svg></span>
+            <span class="brand-text">HiTek<span class="brand-sep">//</span>ICMR</span>
+            <span class="brand-tag">v2</span>
+        </a>
+        <button class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="navLinks" aria-label="Toggle navigation">
+            <span></span><span></span><span></span>
+        </button>
+        <ul class="nav-links" id="navLinks">
+            <li><a class="nav-link" href="index.html">Search</a></li>
+            <li><a class="nav-link active" href="docs.html" aria-current="page">API Docs</a></li>
+            <li><a class="nav-link" href="https://github.com/Unknown-2829/hitek-icmr-db-osint/tree/legacy-v1" target="_blank" rel="noopener noreferrer">GitHub<svg class="icon icon-sm"><use href="#i-external"/></svg></a></li>
+            <li><a class="nav-link btn-nav" href="https://t.me/Unknownlll2829" target="_blank" rel="noopener noreferrer">Contact Dev</a></li>
         </ul>
-    </nav>
+    </div>
+</header>
 
-    <section class="docs-page">
-        <h1>API Documentation</h1>
-        <p class="subtitle">Public REST API for mobile number intelligence lookup.</p>
+<!-- Docs layout -->
+<main class="docs-layout">
+    <aside class="docs-toc" aria-label="On this page">
+        <div class="toc-title">On this page</div>
+        <a class="toc-link" href="#base-url">Base URL</a>
+        <a class="toc-link" href="#capability">Root Capability Document</a>
+        <a class="toc-link" href="#lookup">Unified Lookup Endpoint</a>
+        <a class="toc-link" href="#phone">Dedicated Phone Endpoint</a>
+        <a class="toc-link" href="#aadhaar">Dedicated Aadhaar Endpoint</a>
+        <a class="toc-link" href="#bfs">BFS Traversal Engine</a>
+        <a class="toc-link" href="#health">Health Endpoint</a>
+        <a class="toc-link" href="#stats">Stats Endpoint</a>
+        <a class="toc-link" href="#examples">Code Examples</a>
+        <a class="toc-link" href="#config">Self-Hosting Config</a>
+        <a class="toc-link" href="#vps-tuning">VPS Deployment &amp; Tuning</a>
+    </aside>
+
+    <div class="docs-content">
+        <h1 class="docs-title">API Documentation</h1>
+        <p class="docs-sub">Enterprise-grade self-hosted REST API for dual HiTek (Phone) and ICMR (Aadhaar) SQLite databases with symmetric multi-hop BFS graph traversal.</p>
 
         <!-- Base URL -->
-        <div class="docs-section reveal" id="get-api">
-            <h2>🌐 Base URL</h2>
-            <pre>https://api.unknowns.app</pre>
-            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.5rem;">
-                Replace with your VPS domain or IP where the API is running.
-            </p>
-        </div>
+        <section class="docs-section" id="base-url">
+            <h2><svg class="icon"><use href="#i-terminal"/></svg>Base URL</h2>
+            <pre data-lang="text">http://localhost:8000</pre>
+            <p>Replace with your VPS IP or custom domain where the API is hosted (e.g., <code>https://api.yourdomain.com</code>).</p>
+            <p>All endpoints are documented interactively in Swagger UI at <a href="/docs" target="_blank" style="color:var(--accent);text-decoration:underline;"><code>/docs</code></a>. (ReDoc has been disabled per architecture spec).</p>
+        </section>
 
-        <!-- Lookup Endpoint -->
-        <div class="docs-section">
-            <h2>🔍 Lookup Endpoint</h2>
+        <!-- Root Capability Document -->
+        <section class="docs-section" id="capability">
+            <h2><svg class="icon"><use href="#i-info"/></svg>Root Capability Document</h2>
 
             <div class="endpoint-card">
-                <span class="endpoint-method">GET</span>
-                <span class="endpoint-path">/api/lookup?number={mobile}</span>
-                <p class="endpoint-desc">Search a mobile number with deep-link analysis across all connected records.
-                </p>
+                <div class="endpoint-head">
+                    <span class="method-chip">GET</span>
+                    <span class="method-chip" style="background:rgba(255,255,255,0.08);color:var(--text-muted);">HEAD</span>
+                    <code class="endpoint-path">/</code>
+                </div>
+                <p class="endpoint-desc">Returns a machine-readable capability specification following the Phantom OSINT architecture. Reports dynamic database connection state, detected table counts, memory-mapped I/O bounds, and complete endpoint routing.</p>
             </div>
 
-            <h3>Parameters</h3>
-            <table class="param-table">
-                <thead>
-                    <tr>
-                        <th>Param</th>
-                        <th>Type</th>
-                        <th>Required</th>
-                        <th>Description</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><code>number</code></td>
-                        <td>string</td>
-                        <td>Yes</td>
-                        <td>10-digit Indian mobile. Auto-cleans +91, 0 prefixes.</td>
-                    </tr>
-                </tbody>
-            </table>
+            <h3>Response Headers</h3>
+            <pre data-lang="http">Cache-Control: no-store
+X-Powered-By: Phantom OSINT by @Unknownlll2829</pre>
 
-            <h3>Example Request</h3>
-            <pre>GET /api/lookup?number=9876543210</pre>
-
-            <h3>Example Response</h3>
-            <pre>{
-  "query": "9876543210",
-  "found": true,
-  "total_records": 4,
-  "total_phones": 3,
-  "phones": [
-    "9876543210",
-    "8817342793",
-    "7000419892"
-  ],
-  "names": ["Arun Kumar Patel"],
-  "father_names": ["Sarita Patel"],
-  "emails": [],
-  "addresses": [
-    "W/O Arun Kumar, Rewa, Madhya Pradesh, 486340",
-    "Ward no. 7, Korawara, Satna, MP, 485661"
-  ],
-  "regions": ["AIRTEL MP", "JIO MP"],
-  "response_time_ms": 156
-}</pre>
-
-            <h3>Error Response (400)</h3>
-            <pre>{
-  "detail": {
-    "error": "Invalid number",
-    "message": "Please provide a valid 10-digit Indian mobile number.",
-    "example": "9876543210"
+            <h3>Example Response (200 OK)</h3>
+            <pre data-lang="json">{
+  "app": "HiTek &amp; ICMR DB OSINT API",
+  "version": "1.2.0",
+  "status": "online",
+  "environment": "vps-production",
+  "engine": {
+    "type": "SQLite WAL (Asynchronous aiosqlite)",
+    "database_connected": true,
+    "tables_detected": 2,
+    "page_cache_mb": 64,
+    "mmap_size_gb": 2.0
+  },
+  "endpoints": {
+    "unified_lookup": "/api/lookup?q={number}&amp;depth={1-5}",
+    "phone_lookup": "/api/phone?number={10_digit_mobile}&amp;depth={1-5}",
+    "aadhaar_lookup": "/api/aadhaar?uid={12_digit_aadhaar}&amp;depth={1-5}",
+    "health": "/health",
+    "stats": "/api/stats",
+    "documentation": "/docs"
+  },
+  "search_capabilities": {
+    "modes": ["auto", "phone", "aadhaar", "bfs"],
+    "default_depth": 3,
+    "max_depth": 5,
+    "max_global_results": 200,
+    "data_masking": false
+  },
+  "credits": {
+    "developer": "@Unknownlll2829",
+    "github": "https://github.com/Unknown-2829/hitek-icmr-db-osint"
   }
 }</pre>
-        </div>
+            <p><strong>Uptime Probe:</strong> <code>HEAD /</code> returns HTTP <code>200 OK</code> with identical headers and zero body bytes for external health check bots and keepalive probes.</p>
+        </section>
 
-        <!-- Stats Endpoint -->
-        <div class="docs-section">
-            <h2>📊 Stats Endpoint</h2>
+        <!-- Lookup Endpoint -->
+        <section class="docs-section" id="lookup">
+            <h2><svg class="icon"><use href="#i-search"/></svg>Unified Lookup Endpoint</h2>
 
             <div class="endpoint-card">
-                <span class="endpoint-method">GET</span>
-                <span class="endpoint-path">/api/stats</span>
-                <p class="endpoint-desc">Get database statistics and health info.</p>
+                <div class="endpoint-head">
+                    <span class="method-chip">GET</span>
+                    <code class="endpoint-path">/api/lookup?q={phone_or_aadhaar}&amp;depth={1-5}</code>
+                </div>
+                <p class="endpoint-desc">Search by Indian mobile number or Aadhaar UID with symmetric multi-hop relational BFS traversal across all detected SQLite tables.</p>
+            </div>
+
+            <h3>Query Parameters</h3>
+            <div class="table-wrap">
+                <table class="param-table">
+                    <thead>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Type</th>
+                            <th>Required</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>q</code></td>
+                            <td>string</td>
+                            <td>Yes*</td>
+                            <td>Unified search identifier. Auto-detects 10-digit mobile or 12-digit Aadhaar UID. Normalizes <code>+91</code>, <code>091</code>, and leading <code>0</code>.</td>
+                        </tr>
+                        <tr>
+                            <td><code>mobile</code></td>
+                            <td>string</td>
+                            <td>Optional</td>
+                            <td>Explicit mobile phone search (strictly validates as 10-digit mobile). Cannot be combined with conflicting <code>aadhaar</code>.</td>
+                        </tr>
+                        <tr>
+                            <td><code>aadhaar</code></td>
+                            <td>string</td>
+                            <td>Optional</td>
+                            <td>Explicit Aadhaar UID search (strictly validates as 12-digit Aadhaar). Cannot be combined with conflicting <code>mobile</code>.</td>
+                        </tr>
+                        <tr>
+                            <td><code>number</code></td>
+                            <td>string</td>
+                            <td>Optional</td>
+                            <td>Legacy alias for <code>q</code>. Supports both 10-digit mobile numbers and 12-digit Aadhaar UIDs.</td>
+                        </tr>
+                        <tr>
+                            <td><code>depth</code></td>
+                            <td>integer</td>
+                            <td>Optional</td>
+                            <td>Maximum BFS relational graph traversal hops (<code>1</code> to <code>5</code>, default: <code>3</code>).</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="table-note">* Provide at least one identifier via <code>q</code>, <code>mobile</code>, <code>aadhaar</code>, or <code>number</code>.</p>
+
+            <h3>Example Requests</h3>
+            <pre data-lang="http">GET /api/lookup?q=9876543210&amp;depth=3
+GET /api/lookup?aadhaar=123456789012&amp;depth=2</pre>
+
+            <h3>Modernized Hybrid Response Structure (200 OK)</h3>
+            <p>The response incorporates modern namespaced objects (<code>meta</code>, <code>identity</code>, <code>location</code>, <code>telecom</code>, <code>sources</code>, <code>credits</code>) while preserving all legacy top-level list keys for 100% backward compatibility with frontend clients and scripts:</p>
+            <pre data-lang="json">{
+  "success": true,
+  "found": true,
+  "query": "9876543210",
+  "query_type": "phone",
+  "meta": {
+    "search_depth": 3,
+    "total_records": 3,
+    "truncated": false,
+    "response_time_ms": 68,
+    "engine": "SQLite WAL"
+  },
+  "identity": {
+    "primary_phones": [
+      "9876543210"
+    ],
+    "aadhaar_numbers": [
+      "123456789012"
+    ],
+    "alternate_numbers": [
+      "9811122233"
+    ],
+    "names": [
+      "Arun Patel"
+    ],
+    "father_names": [
+      "Suresh Patel"
+    ]
+  },
+  "location": {
+    "addresses": [
+      "Flat 4B, Green Park, South Delhi, Delhi, 110016"
+    ],
+    "districts": [
+      "South Delhi"
+    ],
+    "states": [
+      "Delhi"
+    ],
+    "pincodes": [
+      "110016"
+    ]
+  },
+  "telecom": {
+    "circles": [
+      "AIRTEL DELHI"
+    ]
+  },
+  "phones": [
+    "9876543210"
+  ],
+  "aadhar_numbers": [
+    "123456789012"
+  ],
+  "other_numbers": [
+    "9811122233"
+  ],
+  "names": [
+    "Arun Patel"
+  ],
+  "father_names": [
+    "Suresh Patel"
+  ],
+  "addresses": [
+    "Flat 4B, Green Park, South Delhi, Delhi, 110016"
+  ],
+  "districts": [
+    "South Delhi"
+  ],
+  "states": [
+    "Delhi"
+  ],
+  "pincodes": [
+    "110016"
+  ],
+  "regions": [
+    "AIRTEL DELHI"
+  ],
+  "sources": [
+    "hitek_telecom",
+    "icmr_demographics"
+  ],
+  "credits": {
+    "developer": "@Unknownlll2829",
+    "github": "https://github.com/Unknown-2829/hitek-icmr-db-osint"
+  }
+}</pre>
+
+            <h3>Error Responses</h3>
+            <div class="table-wrap">
+                <table class="param-table">
+                    <thead>
+                        <tr>
+                            <th>Status Code</th>
+                            <th>Error Code</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>400 Bad Request</code></td>
+                            <td><code>MISSING_QUERY</code></td>
+                            <td>No search parameter was provided in the query string.</td>
+                        </tr>
+                        <tr>
+                            <td><code>400 Bad Request</code></td>
+                            <td><code>INVALID_FORMAT</code></td>
+                            <td>Input format is not a valid 10-digit Indian mobile or 12-digit Aadhaar UID.</td>
+                        </tr>
+                        <tr>
+                            <td><code>400 Bad Request</code></td>
+                            <td><code>CONFLICTING_PARAMETERS</code></td>
+                            <td>Both <code>mobile</code> and <code>aadhaar</code> parameters were passed with conflicting values.</td>
+                        </tr>
+                        <tr>
+                            <td><code>401 Unauthorized</code></td>
+                            <td><code>UNAUTHORIZED</code></td>
+                            <td>API key required when <code>API_AUTH_ENABLED=true</code>. Provide via <code>X-API-Key</code> or <code>Authorization: Bearer</code>.</td>
+                        </tr>
+                        <tr>
+                            <td><code>429 Too Many Requests</code></td>
+                            <td><code>RATE_LIMITED</code></td>
+                            <td>Client exceeded IP rate limit sliding window. Header <code>Retry-After</code> indicates wait time.</td>
+                        </tr>
+                        <tr>
+                            <td><code>503 Service Unavailable</code></td>
+                            <td><code>DATABASE_UNAVAILABLE</code></td>
+                            <td>SQLite database engine is disconnected or undergoing maintenance.</td>
+                        </tr>
+                        <tr>
+                            <td><code>500 Server Error</code></td>
+                            <td><code>DATABASE_ERROR</code></td>
+                            <td>Internal search query exception (detailed traces logged safely server-side).</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Dedicated Phone Endpoint -->
+        <section class="docs-section" id="phone">
+            <h2><svg class="icon"><use href="#i-phone"/></svg>Dedicated Phone Endpoint</h2>
+
+            <div class="endpoint-card">
+                <div class="endpoint-head">
+                    <span class="method-chip">GET</span>
+                    <code class="endpoint-path">/api/phone?number={10_digit_mobile}&amp;depth={1-5}</code>
+                </div>
+                <div class="endpoint-head" style="margin-top:8px;">
+                    <span class="method-chip">GET</span>
+                    <code class="endpoint-path">/api/phone/{number}?depth={1-5}</code>
+                </div>
+                <p class="endpoint-desc">First-class dedicated endpoint for mobile number queries. Automatically forces phone search mode, normalizes country prefixes (<code>+91</code>, <code>091</code>, <code>0</code>), and rejects non-phone inputs with <code>400 Bad Request</code>.</p>
+            </div>
+
+            <h3>Query &amp; Path Parameters</h3>
+            <div class="table-wrap">
+                <table class="param-table">
+                    <thead>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>In</th>
+                            <th>Required</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>number</code></td>
+                            <td>Path / Query</td>
+                            <td>Yes*</td>
+                            <td>10-digit Indian mobile number (must begin with 6, 7, 8, or 9). Prefix formatting like <code>+91</code> is stripped cleanly.</td>
+                        </tr>
+                        <tr>
+                            <td><code>q</code></td>
+                            <td>Query</td>
+                            <td>Optional</td>
+                            <td>Alternative query parameter for <code>number</code>.</td>
+                        </tr>
+                        <tr>
+                            <td><code>depth</code></td>
+                            <td>Query</td>
+                            <td>Optional</td>
+                            <td>Relational graph traversal depth (<code>1</code> to <code>5</code>, default: <code>3</code>).</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>Example Requests</h3>
+            <pre data-lang="http">GET /api/phone?number=9876543210&amp;depth=3
+GET /api/phone/9876543210</pre>
+        </section>
+
+        <!-- Dedicated Aadhaar Endpoint -->
+        <section class="docs-section" id="aadhaar">
+            <h2><svg class="icon"><use href="#i-id"/></svg>Dedicated Aadhaar Endpoint</h2>
+
+            <div class="endpoint-card">
+                <div class="endpoint-head">
+                    <span class="method-chip">GET</span>
+                    <code class="endpoint-path">/api/aadhaar?uid={12_digit_aadhaar}&amp;depth={1-5}</code>
+                </div>
+                <div class="endpoint-head" style="margin-top:8px;">
+                    <span class="method-chip">GET</span>
+                    <code class="endpoint-path">/api/aadhaar/{uid}?depth={1-5}</code>
+                </div>
+                <p class="endpoint-desc">First-class dedicated endpoint for Aadhaar UID demographic lookups. Enforces strict 12-digit UID verification and traverses connected phone records across HiTek and ICMR tables.</p>
+            </div>
+
+            <h3>Query &amp; Path Parameters</h3>
+            <div class="table-wrap">
+                <table class="param-table">
+                    <thead>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>In</th>
+                            <th>Required</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>uid</code></td>
+                            <td>Path / Query</td>
+                            <td>Yes*</td>
+                            <td>Strict 12-digit Aadhaar UID number (all non-digit delimiters like spaces or hyphens are stripped).</td>
+                        </tr>
+                        <tr>
+                            <td><code>q</code></td>
+                            <td>Query</td>
+                            <td>Optional</td>
+                            <td>Alternative query parameter for <code>uid</code>.</td>
+                        </tr>
+                        <tr>
+                            <td><code>depth</code></td>
+                            <td>Query</td>
+                            <td>Optional</td>
+                            <td>Relational graph traversal depth (<code>1</code> to <code>5</code>, default: <code>3</code>).</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>Example Requests</h3>
+            <pre data-lang="http">GET /api/aadhaar?uid=123456789012&amp;depth=2
+GET /api/aadhaar/123456789012</pre>
+        </section>
+
+        <!-- Relational BFS Graph Traversal -->
+        <section class="docs-section" id="bfs">
+            <h2><svg class="icon"><use href="#i-network"/></svg>Symmetric BFS Relational Traversal Engine</h2>
+            <p>
+                Unlike standard single-table lookup tools, the engine implements a <strong>bidirectional Breadth-First Search (BFS) graph traversal algorithm</strong> that bridges the gap between disparate data registries:
+            </p>
+            <ul class="docs-list">
+                <li><strong>HiTek Telecom Tables:</strong> Phone-keyed records containing full names, father names, addresses, alternate contact numbers, and telecom circles.</li>
+                <li><strong>ICMR Medical/Demographic Tables:</strong> Aadhaar UID-keyed records containing demographic profiles, states, districts, PIN codes, and linked phone numbers.</li>
+            </ul>
+
+            <h3>Visual Traversal Architecture</h3>
+            <pre class="diagram" data-lang="diagram">[ Hop 0: Input Seed ] ── (Phone: 9876543210 or Aadhaar: 123456789012)
+          │
+[ Hop 1: Primary Discovery ] ── Query HiTek &amp; ICMR SQLite tables
+          │                      Extract: Discovered Aadhaar UIDs &amp; Phone Numbers
+[ Hop 2: Cross-Registry Expansion ] ── Traverse cross-table relations (Phone ↔ Aadhaar)
+          │
+[ Hop 3: Multi-Hop Link Graph ] ── Deep transitive expansion across alternate numbers &amp; linked family trees
+          │
+[ Canonical Deduplication ] ── Full identity profile merged with zero data loss</pre>
+
+            <h3>Configuring Traversal Depth</h3>
+            <div class="table-wrap">
+                <table class="param-table">
+                    <thead>
+                        <tr>
+                            <th>Depth Value</th>
+                            <th>Traversal Behavior</th>
+                            <th>Typical Latency</th>
+                            <th>Recommended Use Case</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>depth=1</code></td>
+                            <td>Direct seed matches only. Exits before expanding newly discovered links.</td>
+                            <td>~5-15 ms</td>
+                            <td>High-throughput batch verification or exact record checks.</td>
+                        </tr>
+                        <tr>
+                            <td><code>depth=2</code></td>
+                            <td>Follows 1st-degree relationships (Phone ↔ Aadhaar link).</td>
+                            <td>~15-40 ms</td>
+                            <td>Standard intelligence correlation and demographic enrichment.</td>
+                        </tr>
+                        <tr>
+                            <td><code>depth=3</code> (Default)</td>
+                            <td>Full 3-hop multi-link expansion across alternate phones and connected identities.</td>
+                            <td>~30-80 ms</td>
+                            <td>Deep OSINT investigation, family tree tracing, and identity clustering.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Health Endpoint -->
+        <section class="docs-section" id="health">
+            <h2><svg class="icon"><use href="#i-activity"/></svg>Health Endpoint</h2>
+
+            <div class="endpoint-card">
+                <div class="endpoint-head">
+                    <span class="method-chip">GET</span>
+                    <code class="endpoint-path">/health</code>
+                </div>
+                <p class="endpoint-desc">Stateful service readiness and database connectivity monitor (safe for public monitoring &amp; container orchestrators).</p>
+            </div>
+
+            <h3>Example Response (200 OK — Ready)</h3>
+            <pre data-lang="json">{
+  "status": "healthy",
+  "service": "HiTek &amp; ICMR DB OSINT API",
+  "version": "1.2.0",
+  "database_connected": true,
+  "tables_indexed": 2,
+  "rate_limiting": true,
+  "auth_enabled": false
+}</pre>
+            <p>
+                Returns <code>503 Service Unavailable</code> with <code>"status": "degraded"</code> if the SQLite engine is uninitialized or the database file is unreadable.
+            </p>
+        </section>
+
+        <!-- Stats Endpoint -->
+        <section class="docs-section" id="stats">
+            <h2><svg class="icon"><use href="#i-database"/></svg>Stats Endpoint</h2>
+
+            <div class="endpoint-card">
+                <div class="endpoint-head">
+                    <span class="method-chip">GET</span>
+                    <code class="endpoint-path">/api/stats</code>
+                </div>
+                <p class="endpoint-desc">Returns active schema mappings and detected tables (requires authentication when <code>API_AUTH_ENABLED=true</code>).</p>
             </div>
 
             <h3>Example Response</h3>
-            <pre>{
-  "total_records": 1780000000,
-  "database_size": "156.2 GB",
-  "engine": "SQLite WAL",
-  "cache": "64MB",
-  "mmap": "2GB"
+            <pre data-lang="json">{
+  "service": "HiTek &amp; ICMR DB OSINT API",
+  "version": "1.2.0",
+  "database_path": "/data/users.db",
+  "database_ready": true,
+  "detected_tables": {
+    "users": {
+      "phone": ["mobile"],
+      "alt_phone": ["alt_mobile"],
+      "name": ["name"],
+      "father": ["father_name"],
+      "address": ["address"],
+      "circle": ["circle"]
+    },
+    "icmr": {
+      "phone": ["contact_no"],
+      "aadhaar": ["uid"],
+      "name": ["patient_name"],
+      "father": ["fathers_name"],
+      "address": ["residential_address"],
+      "district": ["district"],
+      "state": ["state"],
+      "pincode": ["pin_code"]
+    }
+  },
+  "limits": {
+    "max_results_per_table": 25,
+    "default_search_depth": 3
+  }
 }</pre>
-        </div>
+        </section>
 
         <!-- Usage Examples -->
-        <div class="docs-section">
-            <h2>💻 Usage Examples</h2>
+        <section class="docs-section" id="examples">
+            <h2><svg class="icon"><use href="#i-clipboard"/></svg>Code Examples</h2>
 
-            <h3>cURL</h3>
-            <pre>curl "https://api.unknowns.app/api/lookup?number=9876543210"</pre>
+            <h3>1. cURL</h3>
+            <pre data-lang="bash"># 1. Unified search by phone (auto-detects phone, depth=3)
+curl "http://localhost:8000/api/lookup?q=9876543210&amp;depth=3"
 
-            <h3>Python</h3>
-            <pre>import requests
+# 2. Dedicated Phone endpoint (path format, depth=2)
+curl "http://localhost:8000/api/phone/9876543210?depth=2"
 
-resp = requests.get(
-    "https://api.unknowns.app/api/lookup",
-    params={"number": "9876543210"}
-)
-data = resp.json()
-print(f"Found: {data['total_records']} records")
-for phone in data['phones']:
-    print(f"  📞 {phone}")</pre>
+# 3. Dedicated Aadhaar endpoint (query param, depth=1 exact match)
+curl "http://localhost:8000/api/aadhaar?uid=123456789012&amp;depth=1"
 
-            <h3>JavaScript (fetch)</h3>
-            <pre>const resp = await fetch(
-  'https://api.unknowns.app/api/lookup?number=9876543210'
-);
-const data = await resp.json();
-console.log(`Found ${data.total_records} records`);
-data.phones.forEach(p => console.log(`📞 ${p}`));</pre>
-        </div>
+# 4. Authenticated request (when API_AUTH_ENABLED=true)
+curl -H "X-API-Key: your_secret_key" "http://localhost:8000/api/lookup?q=9876543210"</pre>
 
-        <!-- Self-Hosting -->
-        <div class="docs-section">
-            <h2>🚀 Self-Hosting</h2>
-            <pre># Clone the repo
-git clone https://github.com/Unknown-2829/Hitek_db_api-web.git
-cd Hitek_db_api-web
+            <h3>2. Python (requests / httpx)</h3>
+            <pre data-lang="python">import httpx
 
-# Install dependencies
-pip install -r requirements.txt
+BASE_URL = "http://localhost:8000"
 
-# Set database path
-export DB_PATH="/data/users.db"
+with httpx.Client(base_url=BASE_URL, timeout=10.0) as client:
+    # Query dedicated phone endpoint with 3 traversal hops
+    resp = client.get("/api/phone", params={"number": "9876543210", "depth": 3})
+    data = resp.json()
 
-# Start the API server
-python -m api.main</pre>
-            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.5rem;">
-                The API runs on port 8000 by default. Configure via environment variables.
+    if data.get("found"):
+        identity = data.get("identity", {})
+        location = data.get("location", {})
+        meta = data.get("meta", {})
+
+        print(f"Target Located in {meta.get('response_time_ms')}ms across {meta.get('search_depth')} hop(s):")
+        print("Names:", identity.get("names"))
+        print("Primary Phones:", identity.get("primary_phones"))
+        print("Aadhaar UIDs:", identity.get("aadhaar_numbers"))
+        print("Districts:", location.get("districts"))
+        print("Pincodes:", location.get("pincodes"))
+    else:
+        print("No records located.")</pre>
+
+            <h3>3. JavaScript / Node.js (fetch)</h3>
+            <pre data-lang="javascript">// Dedicated Aadhaar lookup with 2-hop cross-registry expansion
+const uid = "123456789012";
+const depth = 2;
+
+const resp = await fetch(`http://localhost:8000/api/aadhaar/${uid}?depth=${depth}`, {
+  headers: {
+    "Accept": "application/json"
+    // "X-API-Key": "your_secret_key" // If authentication is enabled
+  }
+});
+
+const profile = await resp.json();
+if (profile.found) {
+  console.log(`Identity located: ${profile.identity.names.join(', ')}`);
+  console.log(`Connected Phones: ${profile.identity.primary_phones.join(', ')}`);
+  console.log(`Aadhaar UIDs: ${profile.identity.aadhaar_numbers.join(', ')}`);
+  console.log(`Addresses: ${profile.location.addresses.join(' | ')}`);
+} else {
+  console.log("No matching target profile found.");
+}</pre>
+        </section>
+
+        <!-- Self-Hosting Configuration -->
+        <section class="docs-section" id="config">
+            <h2><svg class="icon"><use href="#i-shield"/></svg>Self-Hosting Configuration</h2>
+            <p>Configure the backend via environment variables or a <code>.env</code> file in the repository root:</p>
+
+            <div class="table-wrap">
+                <table class="param-table">
+                    <thead>
+                        <tr>
+                            <th>Variable</th>
+                            <th>Default</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>DB_PATH</code></td>
+                            <td><code>/data/users.db</code></td>
+                            <td>Absolute path to your SQLite database file</td>
+                        </tr>
+                        <tr>
+                            <td><code>API_HOST</code></td>
+                            <td><code>0.0.0.0</code></td>
+                            <td>Host bind address (use <code>127.0.0.1</code> behind Nginx reverse proxy)</td>
+                        </tr>
+                        <tr>
+                            <td><code>API_PORT</code></td>
+                            <td><code>8000</code></td>
+                            <td>Listening port number</td>
+                        </tr>
+                        <tr>
+                            <td><code>DEEP_SEARCH_DEPTH</code></td>
+                            <td><code>3</code></td>
+                            <td>Default BFS relational link hops (1 to 5)</td>
+                        </tr>
+                        <tr>
+                            <td><code>MAX_RESULTS</code></td>
+                            <td><code>25</code></td>
+                            <td>Maximum rows retrieved per individual table query</td>
+                        </tr>
+                        <tr>
+                            <td><code>MAX_GLOBAL_RESULTS</code></td>
+                            <td><code>100</code></td>
+                            <td>Global profile row ceiling across all tables in a single traversal</td>
+                        </tr>
+                        <tr>
+                            <td><code>SQLITE_CACHE_SIZE_KB</code></td>
+                            <td><code>64000</code></td>
+                            <td>SQLite page cache in KB (~64 MB in RAM for sub-millisecond index hits)</td>
+                        </tr>
+                        <tr>
+                            <td><code>SQLITE_MMAP_SIZE_BYTES</code></td>
+                            <td><code>2147483648</code></td>
+                            <td>SQLite memory-mapped I/O size (2 GB for zero-copy kernel page reads)</td>
+                        </tr>
+                        <tr>
+                            <td><code>SQLITE_SYNCHRONOUS</code></td>
+                            <td><code>NORMAL</code></td>
+                            <td>WAL mode synchronization safety level (<code>NORMAL</code> optimizes throughput)</td>
+                        </tr>
+                        <tr>
+                            <td><code>RATE_LIMIT_ENABLED</code></td>
+                            <td><code>true</code></td>
+                            <td>In-memory sliding-window rate limiting per client IP</td>
+                        </tr>
+                        <tr>
+                            <td><code>RATE_LIMIT_REQUESTS</code></td>
+                            <td><code>60</code></td>
+                            <td>Maximum requests allowed per window</td>
+                        </tr>
+                        <tr>
+                            <td><code>RATE_LIMIT_WINDOW_SECONDS</code></td>
+                            <td><code>60</code></td>
+                            <td>Sliding window duration in seconds</td>
+                        </tr>
+                        <tr>
+                            <td><code>API_AUTH_ENABLED</code></td>
+                            <td><code>false</code></td>
+                            <td>Enable optional API key authentication</td>
+                        </tr>
+                        <tr>
+                            <td><code>API_KEY</code></td>
+                            <td><code>""</code></td>
+                            <td>Secret key checked against <code>X-API-Key</code> / <code>Bearer</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- VPS Deployment & Performance Tuning -->
+        <section class="docs-section" id="vps-tuning">
+            <h2><svg class="icon"><use href="#i-server"/></svg>VPS Deployment &amp; Performance Tuning</h2>
+            <p>
+                Unlike resource-constrained free tiers, a dedicated VPS (Ubuntu 22.04 / 24.04 LTS) unlocks the full throughput of SQLite with WAL mode, kernel-level <code>mmap</code>, and Uvicorn process management:
             </p>
 
-            <h3>Environment Variables</h3>
-            <table class="param-table">
-                <thead>
-                    <tr>
-                        <th>Variable</th>
-                        <th>Default</th>
-                        <th>Description</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><code>DB_PATH</code></td>
-                        <td>/data/users.db</td>
-                        <td>SQLite database path</td>
-                    </tr>
-                    <tr>
-                        <td><code>API_HOST</code></td>
-                        <td>0.0.0.0</td>
-                        <td>Bind address</td>
-                    </tr>
-                    <tr>
-                        <td><code>API_PORT</code></td>
-                        <td>8000</td>
-                        <td>Port number</td>
-                    </tr>
-                    <tr>
-                        <td><code>CORS_ORIGINS</code></td>
-                        <td>*</td>
-                        <td>Comma-separated origins</td>
-                    </tr>
-                    <tr>
-                        <td><code>DEEP_SEARCH_DEPTH</code></td>
-                        <td>3</td>
-                        <td>Max BFS hops</td>
-                    </tr>
-                    <tr>
-                        <td><code>MAX_RESULTS</code></td>
-                        <td>25</td>
-                        <td>Max rows per query</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+            <h3>1. Systemd Service Unit</h3>
+            <p>Create a dedicated systemd service file at <code>/etc/systemd/system/osint-api.service</code>:</p>
+            <pre data-lang="ini">[Unit]
+Description=HiTek &amp; ICMR OSINT Search Engine API
+After=network.target
 
-        <!-- Rate Limiting -->
-        <div class="docs-section">
-            <h2>⚠️ Notes</h2>
-            <ul style="color: var(--text-secondary); font-size: 0.9rem; padding-left: 1.2rem; line-height: 2;">
-                <li>No authentication required — API is fully public</li>
-                <li>Numbers are auto-cleaned: <code>+91 98765 43210</code> → <code>9876543210</code></li>
-                <li>Deep-link search follows alt_mobile chains using indexed lookups only</li>
-                <li>Each hop is O(log n) on the indexed mobile column (~100ms)</li>
-                <li>Total deep search: ~300-500ms for 3 hops</li>
-                <li>Interactive API docs available at <code>/docs</code> (Swagger UI)</li>
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/hitek-icmr-db-osint
+Environment="PATH=/var/www/hitek-icmr-db-osint/venv/bin"
+EnvironmentFile=/var/www/hitek-icmr-db-osint/.env
+ExecStart=/var/www/hitek-icmr-db-osint/venv/bin/uvicorn api.main:app --host 127.0.0.1 --port 8000 --workers 4 --loop uvloop --http httptools
+Restart=always
+RestartSec=5
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target</pre>
+            <pre data-lang="bash">sudo systemctl daemon-reload
+sudo systemctl enable --now osint-api
+sudo systemctl status osint-api</pre>
+
+            <h3>2. Nginx Reverse Proxy Configuration</h3>
+            <p>Place this server block in <code>/etc/nginx/sites-available/osint-api</code>:</p>
+            <pre data-lang="nginx">server {
+    listen 80;
+    server_name api.yourdomain.com;
+
+    # Gzip Compression
+    gzip on;
+    gzip_types text/plain application/json application/javascript text/css;
+
+    # Static Website Frontend
+    location / {
+        root /var/www/hitek-icmr-db-osint/website;
+        index index.html;
+        try_files $uri $uri/ /index.html;
+    }
+
+    # API Reverse Proxy
+    location /api/ {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering on;
+        proxy_buffers 8 16k;
+        proxy_buffer_size 32k;
+    }
+
+    # Health &amp; Docs Endpoints
+    location ~ ^/(health|docs|openapi.json) {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}</pre>
+
+            <h3>3. SQLite Kernel &amp; Hardware Tuning</h3>
+            <ul class="docs-list">
+                <li><strong>Memory-Mapped I/O (<code>PRAGMA mmap_size=2147483648</code>):</strong> Maps 2 GB of the SQLite database directly into user space memory, eliminating <code>read()</code> system call overhead and context switches.</li>
+                <li><strong>Write-Ahead Logging (<code>PRAGMA journal_mode=WAL</code>):</strong> Concurrent readers never block writers and writers never block readers.</li>
+                <li><strong>Synchronous NORMAL (<code>PRAGMA synchronous=NORMAL</code>):</strong> Dramatically decreases fsync latency during transactions while maintaining full consistency in WAL mode.</li>
             </ul>
-        </div>
-    </section>
+        </section>
 
-    <footer class="footer">
-        <p>Phantom OSINT — <a href="https://github.com/Unknown-2829/Hitek_db_api-web" target="_blank">GitHub</a> · <a href="https://t.me/Unknownlll2829" target="_blank" rel="noopener noreferrer">Contact Developer</a> · Built
-            for OSINT research</p>
-    </footer>
+    </div>
+</main>
 
-    <script src="app.js"></script>
+<!-- Footer -->
+<footer class="footer">
+    <div class="footer-inner">
+        <div class="footer-brand">HiTek // ICMR <span>OSINT &middot; v2</span></div>
+        <p class="footer-meta">
+            Developed by <a href="https://t.me/Unknownlll2829" target="_blank" rel="noopener noreferrer">@Unknownlll2829</a> &middot;
+            <a href="https://github.com/Unknown-2829/hitek-icmr-db-osint/tree/legacy-v1" target="_blank" rel="noopener noreferrer">GitHub Repository</a> &middot;
+            <a href="index.html">Search Console</a>
+        </p>
+        <p class="footer-legal">For authorized OSINT research and security analysis only.</p>
+    </div>
+</footer>
 
 </body>
-
 </html>

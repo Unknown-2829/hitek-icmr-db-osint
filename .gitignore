@@ -16,6 +16,15 @@ build/
 
 # Database (too large for git)
 *.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Pytest / Testing
+.pytest_cache/
+.coverage
+htmlcov/
 
 # IDE
 .vscode/
@@ -30,3 +39,7 @@ Thumbs.db
 # Data
 data/
 users_data.json
+
+# Frontend Local Configuration
+website/config.js
+
